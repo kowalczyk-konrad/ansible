@@ -1,0 +1,34 @@
+- hosts: docker
+  become: yes
+  become_method: sudo
+  tasks:
+   - name: Docker Prerequisites
+     yum:
+      name:
+        - bash-completion
+        - vim
+        - yum-utils
+      state: present
+   - name: Add Docker Repository
+     yum_repository:
+       name: docker-stable
+       description: Docker CE Stable - $basearch
+       baseurl: https://download.docker.com/linux/centos/7/$basearch/stable
+       gpgcheck: yes
+       gpgkey: https://download.docker.com/linux/centos/gpg
+   - name: Install Docker CE
+     yum:
+      name:
+        - docker-ce
+        - docker-ce-cli
+        - docker-ce-cli
+      state: present
+
+   - name: Start and enable Docker CE
+     service: name=docker state=started enabled=yes
+   
+   - name: Create user and add them to the docker group
+     user: 
+      name: user
+      password: !!! ___ --- mkpasswd --method=sha-512
+      groups: docker
