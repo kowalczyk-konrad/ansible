@@ -1,0 +1,87 @@
+- hosts: [master]
+  vars_files:
+    - vars/install_vars
+  become: yes
+  become_method: sudo
+  tasks:
+   - name: Disable swap
+     command: swapoff -a
+   - name: Comment out for swap line in /etc/fstab
+     command: sed -i '/\/swap.img/ s/^/#/' /etc/fstab
+   - name: Update cache
+     apt:
+      update_cache: yes
+   - name: Full upgrade
+     apt:
+       upgrade: full
+   - name: Reboot the server and wait for it to come back up
+     reboot:
+   - name: Docker Prerequisite
+     apt:
+      pkg:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg-agent
+        - software-properties-common
+        - vim
+      state: present
+   - name: Add gpg key
+     apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg 
+      state: present
+   - name: Add Docker Repository
+     apt_repository:
+       repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+       state: present
+   - name: Update cache
+     apt:
+      update_cache: yes
+   - name: Install Docker CE
+     apt:
+      pkg:
+       - containerd.io=1.2.13-2
+       - 'docker-ce={{ docker_ver }}'
+       - 'docker-ce-cli={{ docker_ver }}'
+      state: present
+   - name: Configure the Docker Cgroup Driver to systemd 
+     copy:
+        src: vars/daemon.json
+        dest: /etc/docker/daemon.json
+        owner: root
+        group: root
+        mode: '0644'
+        backup: yes
+   - name: Create docker.service.d
+     file:
+        path: /etc/systemd/system/docker.service.d
+        state: directory
+        mode: '0755'
+   - name: Daemon reload
+     systemd:
+       daemon_reload: yes
+   - name: Start and enable Docker CE
+     service:
+       name=docker
+       state=restarted
+       enabled=yes
+   - name: Add kubernetes/google gpg key
+     apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+   - name: Add Kubernetes Repository
+     apt_repository:
+       repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+       state: present
+   - name: Update cache
+     apt:
+      update_cache: yes
+   - name: Install 
+     apt:
+      pkg:
+        - "kubeadm={{ kube_ver }}"
+        - "kubelet={{ kube_ver }}"
+        - "kubectl={{ kube_ver }}"
+      state: present
+#   - name: Start and ! ONLY ! enable kubelet service
+#     service: name=kubelet enabled=yes
