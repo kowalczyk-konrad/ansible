@@ -1,6 +1,6 @@
 - hosts: [master]
   vars_files:
-    - vars/install_vars
+    - install_vars
   become: yes
   become_method: sudo
   tasks:
